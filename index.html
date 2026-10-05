@@ -7,12 +7,10 @@
 
   <title>Data Matrix Scanner</title>
 
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3/dist/iife/reader/index.js"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -46,30 +44,26 @@
       height: auto;
     }
 
-    /* Рамка, куда желательно поместить Data Matrix */
     #aim {
       position: absolute;
-      width: 45%;
+      width: 42%;
       aspect-ratio: 1 / 1;
-      left: 27.5%;
+      left: 29%;
       top: 50%;
       transform: translateY(-50%);
       border: 3px solid white;
       border-radius: 8px;
       pointer-events: none;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.12);
     }
 
-    #startButton,
-    #scanButton {
+    button {
       width: 100%;
-      padding: 18px;
+      padding: 19px;
       margin-top: 12px;
       border: 0;
       border-radius: 12px;
       font-size: 20px;
       font-weight: bold;
-      cursor: pointer;
     }
 
     #startButton {
@@ -78,13 +72,13 @@
     }
 
     #scanButton {
+      display: none;
       background: #146c2e;
       color: white;
-      display: none;
     }
 
     #scanButton:disabled {
-      opacity: 0.5;
+      opacity: .5;
     }
 
     #status {
@@ -103,8 +97,8 @@
       padding: 12px;
       background: white;
       border-radius: 12px;
-      font-size: 13px;
       word-break: break-all;
+      font-size: 13px;
     }
 
     .success {
@@ -122,7 +116,7 @@
       color: #6b5700;
     }
 
-    #debugCanvas {
+    canvas {
       display: none;
     }
   </style>
@@ -153,10 +147,9 @@
 
   <div id="lastCode"></div>
 
-  <canvas id="debugCanvas"></canvas>
+  <canvas id="canvas"></canvas>
 
 </div>
-
 
 <script>
 
@@ -164,24 +157,19 @@ const SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycby-aRQONo0El0YySDgfpcGkDG3B9u4vLcweo3AuGZc8P5gXUCBpxt6cwtnv8ut_9jlGSw/exec";
 
 const video = document.getElementById("video");
-const canvas = document.getElementById("debugCanvas");
-
-const startButton =
-  document.getElementById("startButton");
-
-const scanButton =
-  document.getElementById("scanButton");
+const canvas = document.getElementById("canvas");
+const startButton = document.getElementById("startButton");
+const scanButton = document.getElementById("scanButton");
 
 let stream = null;
-let decoder = null;
 let busy = false;
 
 
-/* =========================
-   ЗАПУСК КАМЕРЫ
-========================= */
+/* ==========================
+   КАМЕРА
+========================== */
 
-startButton.addEventListener("click", startCamera);
+startButton.onclick = startCamera;
 
 async function startCamera() {
 
@@ -189,236 +177,139 @@ async function startCamera() {
 
     setStatus("Запускаю камеру...", "working");
 
-    stream = await navigator.mediaDevices.getUserMedia({
+    stream =
+      await navigator.mediaDevices.getUserMedia({
 
-      video: {
+        video: {
 
-        facingMode: {
-          ideal: "environment"
+          facingMode: {
+            ideal: "environment"
+          },
+
+          width: {
+            ideal: 3840
+          },
+
+          height: {
+            ideal: 2160
+          }
+
         },
 
-        width: {
-          ideal: 3840
-        },
-
-        height: {
-          ideal: 2160
-        }
-
-      },
-
-      audio: false
-    });
-
+        audio: false
+      });
 
     video.srcObject = stream;
 
     await video.play();
 
-
-    /*
-      Создаём декодер.
-
-      Он не сканирует видеопоток постоянно.
-      Используем его только после нажатия кнопки.
-    */
-
-    decoder = new Html5Qrcode(
-      "hidden-reader",
-      {
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.DATA_MATRIX
-        ]
-      }
-    );
-
-
     startButton.style.display = "none";
     scanButton.style.display = "block";
 
     setStatus(
-      "Наведите рамку на Data Matrix и нажмите «Распознать»"
+      "Поместите Data Matrix примерно в центр рамки"
     );
 
-
-    /*
-      Показываем фактическое разрешение,
-      которое дала камера.
-    */
-
     console.log(
-      "Camera resolution:",
+      "Разрешение:",
       video.videoWidth,
       "x",
       video.videoHeight
     );
 
+  }
 
-  } catch (error) {
+  catch (e) {
 
-    console.error(error);
+    console.error(e);
 
     setStatus(
-      "Не удалось открыть камеру: " + error,
+      "Ошибка камеры: " + e,
       "error"
     );
   }
 }
 
 
-/* =========================
-   КНОПКА РАСПОЗНАТЬ
-========================= */
+/* ==========================
+   РАСПОЗНАВАНИЕ
+========================== */
 
-scanButton.addEventListener(
-  "click",
-  captureAndDecode
-);
+scanButton.onclick = recognize;
 
-
-async function captureAndDecode() {
+async function recognize() {
 
   if (busy) return;
 
   if (!video.videoWidth) {
-
-    setStatus(
-      "Камера ещё не готова",
-      "error"
-    );
-
+    setStatus("Камера ещё не готова", "error");
     return;
   }
-
 
   busy = true;
   scanButton.disabled = true;
 
   setStatus(
-    "Распознаю...",
+    "Ищу Data Matrix...",
     "working"
   );
-
 
   try {
 
     /*
-      Получаем кадр в НАТИВНОМ разрешении камеры.
+      Сначала пробуем разные размеры
+      центральной области.
+
+      1.0 = весь кадр
+      0.70 = 70%
+      0.50 = 50%
+      0.35 = 35%
     */
 
-    const sourceWidth =
-      video.videoWidth;
+    const crops = [
+      1.00,
+      0.70,
+      0.50,
+      0.35
+    ];
 
-    const sourceHeight =
-      video.videoHeight;
+    let code = null;
 
+    for (const crop of crops) {
 
-    /*
-      Берём центральную область изображения.
-
-      55% ширины и высоты.
-
-      Это фактически цифровое увеличение:
-      маленький Data Matrix получает намного
-      больше пикселей при распознавании.
-    */
-
-    const cropSize =
-      Math.floor(
-        Math.min(
-          sourceWidth,
-          sourceHeight
-        ) * 0.55
-      );
-
-
-    const sx =
-      Math.floor(
-        (sourceWidth - cropSize) / 2
-      );
-
-    const sy =
-      Math.floor(
-        (sourceHeight - cropSize) / 2
-      );
-
-
-    /*
-      Увеличиваем вырезанный участок
-      до 1600 x 1600.
-    */
-
-    canvas.width = 1600;
-    canvas.height = 1600;
-
-    const ctx =
-      canvas.getContext("2d");
-
-
-    ctx.imageSmoothingEnabled = false;
-
-
-    ctx.drawImage(
-
-      video,
-
-      sx,
-      sy,
-      cropSize,
-      cropSize,
-
-      0,
-      0,
-      1600,
-      1600
-
-    );
-
-
-    /*
-      Canvas -> изображение.
-    */
-
-    const imageData =
-      canvas.toDataURL(
-        "image/png"
-      );
-
-
-    /*
-      DataURL превращаем в Blob/File,
-      который html5-qrcode умеет
-      распознавать как фотографию.
-    */
-
-    const response =
-      await fetch(imageData);
-
-    const blob =
-      await response.blob();
-
-    const file =
-      new File(
-        [blob],
-        "capture.png",
-        {
-          type: "image/png"
-        }
-      );
-
-
-    /*
-      Распознаём фотографию.
-    */
-
-    const result =
-      await decoder.scanFile(
-        file,
+      code = await tryFrame(
+        crop,
         false
       );
 
+      if (code) break;
+    }
 
-    if (!result) {
+
+    /*
+      Если обычные варианты не помогли,
+      пробуем усиленный контраст.
+    */
+
+    if (!code) {
+
+      for (const crop of [
+        0.70,
+        0.50,
+        0.35
+      ]) {
+
+        code = await tryFrame(
+          crop,
+          true
+        );
+
+        if (code) break;
+      }
+    }
+
+
+    if (!code) {
 
       throw new Error(
         "Data Matrix не найден"
@@ -426,7 +317,7 @@ async function captureAndDecode() {
     }
 
 
-    showCode(result);
+    showCode(code);
 
     setStatus(
       "Код найден. Сохраняю...",
@@ -434,7 +325,7 @@ async function captureAndDecode() {
     );
 
 
-    await saveCode(result);
+    await saveCode(code);
 
 
     setStatus(
@@ -447,27 +338,213 @@ async function captureAndDecode() {
       navigator.vibrate(100);
     }
 
-
-  } catch (error) {
-
-    console.error(error);
-
-    setStatus(
-      "Data Matrix не найден. Попробуйте ещё раз.",
-      "error"
-    );
-
   }
 
+  catch (e) {
+
+    console.error(e);
+
+    setStatus(
+      "Data Matrix не найден. Наведите рамку точнее и повторите.",
+      "error"
+    );
+  }
 
   busy = false;
   scanButton.disabled = false;
 }
 
 
-/* =========================
-   СОХРАНЕНИЕ В GOOGLE SHEETS
-========================= */
+/* ==========================
+   ОДНА ПОПЫТКА
+========================== */
+
+async function tryFrame(
+  cropRatio,
+  enhance
+) {
+
+  const sw = video.videoWidth;
+  const sh = video.videoHeight;
+
+  const cropSize =
+    Math.floor(
+      Math.min(sw, sh) * cropRatio
+    );
+
+  const sx =
+    Math.floor(
+      (sw - cropSize) / 2
+    );
+
+  const sy =
+    Math.floor(
+      (sh - cropSize) / 2
+    );
+
+
+  /*
+    Не уменьшаем маленький фрагмент.
+
+    Центральные crop-варианты увеличиваем
+    для декодера.
+  */
+
+  const outputSize =
+    Math.min(
+      2200,
+      Math.max(
+        cropSize,
+        1400
+      )
+    );
+
+
+  canvas.width = outputSize;
+  canvas.height = outputSize;
+
+  const ctx =
+    canvas.getContext(
+      "2d",
+      {
+        willReadFrequently: true
+      }
+    );
+
+  ctx.imageSmoothingEnabled = false;
+
+
+  ctx.drawImage(
+
+    video,
+
+    sx,
+    sy,
+    cropSize,
+    cropSize,
+
+    0,
+    0,
+    outputSize,
+    outputSize
+
+  );
+
+
+  let imageData =
+    ctx.getImageData(
+      0,
+      0,
+      outputSize,
+      outputSize
+    );
+
+
+  if (enhance) {
+
+    enhanceContrast(
+      imageData
+    );
+  }
+
+
+  const results =
+    await ZXingWASM.readBarcodes(
+
+      imageData,
+
+      {
+        formats: [
+          "DataMatrix"
+        ],
+
+        tryHarder: true,
+        tryRotate: true,
+        tryInvert: true,
+        tryDownscale: true,
+        tryDenoise: true,
+
+        maxNumberOfSymbols: 1
+      }
+    );
+
+
+  if (
+    results &&
+    results.length > 0
+  ) {
+
+    for (const result of results) {
+
+      if (
+        result &&
+        result.isValid &&
+        result.text
+      ) {
+
+        console.log(
+          "Распознано:",
+          result
+        );
+
+        return result.text;
+      }
+    }
+  }
+
+  return null;
+}
+
+
+/* ==========================
+   УСИЛЕНИЕ КОНТРАСТА
+========================== */
+
+function enhanceContrast(imageData) {
+
+  const data =
+    imageData.data;
+
+  const contrast = 1.6;
+
+  for (
+    let i = 0;
+    i < data.length;
+    i += 4
+  ) {
+
+    const gray =
+      0.299 * data[i] +
+      0.587 * data[i + 1] +
+      0.114 * data[i + 2];
+
+
+    let value =
+      (gray - 128) *
+      contrast +
+      128;
+
+
+    value =
+      Math.max(
+        0,
+        Math.min(
+          255,
+          value
+        )
+      );
+
+
+    data[i] = value;
+    data[i + 1] = value;
+    data[i + 2] = value;
+  }
+}
+
+
+/* ==========================
+   GOOGLE SHEETS
+========================== */
 
 async function saveCode(code) {
 
@@ -487,45 +564,41 @@ async function saveCode(code) {
 }
 
 
-/* =========================
+/* ==========================
    ИНТЕРФЕЙС
-========================= */
+========================== */
 
 function setStatus(
   text,
   className = ""
 ) {
 
-  const status =
-    document.getElementById("status");
+  const element =
+    document.getElementById(
+      "status"
+    );
 
-  status.innerText = text;
-  status.className = className;
+  element.innerText = text;
+  element.className = className;
 }
 
 
 function showCode(code) {
 
   const element =
-    document.getElementById("lastCode");
+    document.getElementById(
+      "lastCode"
+    );
 
-  element.style.display = "block";
+  element.style.display =
+    "block";
 
   element.innerText =
-    "Распознано:\n" + code;
+    "Распознано:\n" +
+    code;
 }
 
 </script>
-
-
-<!--
-  Этот элемент нужен библиотеке html5-qrcode,
-  но пользователю его показывать не нужно.
--->
-<div
-  id="hidden-reader"
-  style="display:none">
-</div>
 
 </body>
 </html>
