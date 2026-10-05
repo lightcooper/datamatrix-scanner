@@ -116,7 +116,6 @@ let lastTime = 0;
 async function startScanner() {
 
   document.getElementById("startButton").style.display = "none";
-
   setStatus("Запускаю камеру...");
 
   scanner = new Html5Qrcode(
@@ -124,7 +123,8 @@ async function startScanner() {
     {
       formatsToSupport: [
         Html5QrcodeSupportedFormats.DATA_MATRIX
-      ]
+      ],
+      verbose: false
     }
   );
 
@@ -132,19 +132,50 @@ async function startScanner() {
 
     await scanner.start(
 
-      { facingMode: "environment" },
+      {
+        facingMode: {
+          exact: "environment"
+        }
+      },
 
       {
-        fps: 15
+        fps: 20,
+
+        videoConstraints: {
+          facingMode: "environment",
+
+          width: {
+            ideal: 1920
+          },
+
+          height: {
+            ideal: 1080
+          },
+
+          focusMode: "continuous"
+        },
+
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+
+          const size = Math.floor(
+            Math.min(viewfinderWidth, viewfinderHeight) * 0.75
+          );
+
+          return {
+            width: size,
+            height: size
+          };
+        }
       },
 
       scanSuccess,
 
       function() {}
-
     );
 
-    setStatus("Наведите камеру на Data Matrix");
+    setStatus(
+      "Поместите Data Matrix внутрь рамки"
+    );
 
   }
 
@@ -153,7 +184,7 @@ async function startScanner() {
     console.error(error);
 
     setStatus(
-      "Не удалось открыть камеру: " + error,
+      "Ошибка камеры: " + error,
       "error"
     );
 
