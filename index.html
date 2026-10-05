@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <title>Data Matrix Scanner</title>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 24px;
+    }
+
+    #reader {
+      width: 100%;
+      background: black;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+
+    #status {
+      margin-top: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    #lastCode {
+      margin-top: 10px;
+      padding: 12px;
+      background: white;
+      border-radius: 12px;
+      word-break: break-all;
+      display: none;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 15px;
+      padding: 18px;
+      border: 0;
+      border-radius: 12px;
+      background: #222;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .success {
+      background: #dff5e5 !important;
+      color: #176b32;
+    }
+
+    .saving {
+      background: #fff3cd !important;
+    }
+
+    .error {
+      background: #ffe0e0 !important;
+      color: #a00000;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>Data Matrix</h1>
+
+  <div id="reader"></div>
+
+  <div id="status">
+    Нажмите «Запустить сканер»
+  </div>
+
+  <div id="lastCode"></div>
+
+  <button id="startButton" onclick="startScanner()">
+    Запустить сканер
+  </button>
+
+</div>
+
+<script>
+
+const SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycby-aRQONo0El0YySDgfpcGkDG3B9u4vLcweo3AuGZc8P5gXUCBpxt6cwtnv8ut_9jlGSw/exec";
+
+let scanner;
+let saving = false;
+
+let lastCode = "";
+let lastTime = 0;
+
+
+async function startScanner() {
+
+  document.getElementById("startButton").style.display = "none";
+
+  setStatus("Запускаю камеру...");
+
+  scanner = new Html5Qrcode(
+    "reader",
+    {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.DATA_MATRIX
+      ]
+    }
+  );
+
+  try {
+
+    await scanner.start(
+
+      { facingMode: "environment" },
+
+      {
+        fps: 15
+      },
+
+      scanSuccess,
+
+      function() {}
+
+    );
+
+    setStatus("Наведите камеру на Data Matrix");
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    setStatus(
+      "Не удалось открыть камеру: " + error,
+      "error"
+    );
+
+    document.getElementById("startButton").style.display = "block";
+  }
+}
+
+
+function scanSuccess(code) {
+
+  if (saving) return;
+
+  const now = Date.now();
+
+  // Не записываем один и тот же код несколько раз подряд
+  if (
+    code === lastCode &&
+    now - lastTime < 5000
+  ) {
+    return;
+  }
+
+  saving = true;
+
+  lastCode = code;
+  lastTime = now;
+
+  showCode(code);
+
+  setStatus(
+    "Сохраняю...",
+    "saving"
+  );
+
+
+  const url =
+    SCRIPT_URL +
+    "?code=" +
+    encodeURIComponent(code);
+
+
+  fetch(url, {
+    method: "GET",
+    mode: "no-cors"
+  })
+
+  .then(function() {
+
+    setStatus(
+      "✓ Сохранено",
+      "success"
+    );
+
+    if (navigator.vibrate) {
+      navigator.vibrate(100);
+    }
+
+    setTimeout(function() {
+
+      saving = false;
+
+      setStatus(
+        "Наведите на следующий Data Matrix"
+      );
+
+    }, 1000);
+
+  })
+
+  .catch(function(error) {
+
+    console.error(error);
+
+    setStatus(
+      "Ошибка отправки",
+      "error"
+    );
+
+    setTimeout(function() {
+      saving = false;
+    }, 2000);
+
+  });
+
+}
+
+
+function setStatus(text, className = "") {
+
+  const status =
+    document.getElementById("status");
+
+  status.innerText = text;
+  status.className = className;
+}
+
+
+function showCode(code) {
+
+  const element =
+    document.getElementById("lastCode");
+
+  element.style.display = "block";
+
+  element.innerText =
+    "Последний код:\n" + code;
+}
+
+</script>
+
+</body>
+</html>
