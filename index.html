@@ -477,18 +477,28 @@ async function tryFrame(
     for (const result of results) {
 
       if (
-        result &&
-        result.isValid &&
-        result.text
-      ) {
+  result &&
+  result.isValid
+) {
 
-        console.log(
-          "Распознано:",
-          result
-        );
+  console.log(
+    "Полный результат ZXing:",
+    result
+  );
 
-        return result.text;
-      }
+  // Для GS1 Data Matrix восстанавливаем исходную строку,
+  // которую ожидает система маркировки.
+  let code = result.text || "";
+
+  code = code
+    .replace(/^\(01\)/, "01")
+    .replace(/\(21\)/, "21")
+    .replace(/\(91\)/g, "\x1D91")
+    .replace(/\(92\)/g, "\x1D92")
+    .replace(/\(93\)/g, "\x1D93");
+
+  return code;
+}
     }
   }
 
