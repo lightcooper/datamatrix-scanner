@@ -2,180 +2,289 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+
   <meta name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1">
+        content="width=device-width,
+                 initial-scale=1,
+                 maximum-scale=1,
+                 user-scalable=no">
 
   <title>Data Matrix Scanner</title>
 
   <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3/dist/iife/reader/index.js"></script>
 
   <style>
-    * { box-sizing: border-box; }
 
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
     body {
       margin: 0;
-      padding: 12px;
+      padding: 0;
+      background: #111;
       font-family: Arial, sans-serif;
-      background: #f3f3f3;
+    }
+
+    body {
+      padding: 8px;
     }
 
     .container {
+      width: 100%;
       max-width: 600px;
-      margin: auto;
+      margin: 0 auto;
     }
 
-    h1 {
-      text-align: center;
-      font-size: 22px;
-      margin: 8px 0 12px;
-    }
+    /* =========================
+       КВАДРАТНАЯ КАМЕРА
+    ========================= */
 
     #cameraBox {
       position: relative;
+
       width: 100%;
+      aspect-ratio: 1 / 1;
+
       overflow: hidden;
-      border-radius: 15px;
+
+      border-radius: 14px;
+
       background: #000;
     }
 
     #video {
-      display: block;
+      position: absolute;
+
       width: 100%;
-      height: auto;
+      height: 100%;
+
+      left: 0;
+      top: 0;
+
+      object-fit: cover;
     }
+
+
+    /* =========================
+       РАМКА DATA MATRIX
+    ========================= */
 
     #aim {
       position: absolute;
-      width: 42%;
-      aspect-ratio: 1 / 1;
-      left: 29%;
-      top: 50%;
-      transform: translateY(-50%);
+
+      width: 55%;
+      height: 55%;
+
+      left: 22.5%;
+      top: 22.5%;
+
       border: 3px solid white;
       border-radius: 8px;
+
       pointer-events: none;
+
+      box-shadow:
+        0 0 0 9999px rgba(0,0,0,0.10);
     }
+
+
+    /* =========================
+       КНОПКИ
+    ========================= */
 
     button {
       width: 100%;
-      padding: 19px;
-      margin-top: 12px;
+
+      margin-top: 8px;
+      padding: 17px;
+
       border: 0;
       border-radius: 12px;
-      font-size: 20px;
+
+      font-size: 21px;
       font-weight: bold;
+
+      cursor: pointer;
     }
 
     #startButton {
-      background: #222;
-      color: white;
+      background: #ffffff;
+      color: #111;
     }
 
     #scanButton {
       display: none;
-      background: #146c2e;
+
+      background: #20a447;
       color: white;
     }
 
     #scanButton:disabled {
-      opacity: .5;
+      opacity: 0.55;
     }
 
+
+    /* =========================
+       СТАТУС
+    ========================= */
+
     #status {
-      margin-top: 12px;
-      padding: 15px;
-      border-radius: 12px;
-      background: white;
+      margin-top: 8px;
+      padding: 10px;
+
+      min-height: 42px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 10px;
+
+      background: #222;
+      color: white;
+
       text-align: center;
-      font-size: 17px;
+
+      font-size: 15px;
       font-weight: bold;
     }
 
-    #lastCode {
-      display: none;
-      margin-top: 10px;
-      padding: 12px;
-      background: white;
-      border-radius: 12px;
-      word-break: break-all;
-      font-size: 13px;
-    }
-
     .success {
-      background: #dff5e5 !important;
-      color: #176b32;
+      background: #176b32 !important;
+      color: white !important;
     }
 
     .error {
-      background: #ffe0e0 !important;
-      color: #a00000;
+      background: #9e2020 !important;
+      color: white !important;
     }
 
     .working {
-      background: #fff3cd !important;
-      color: #6b5700;
+      background: #765b00 !important;
+      color: white !important;
     }
 
-    canvas {
+
+    /* =========================
+       ПОСЛЕДНИЙ КОД
+    ========================= */
+
+    #lastCode {
+      display: none;
+
+      margin-top: 6px;
+      padding: 8px;
+
+      border-radius: 8px;
+
+      background: #222;
+      color: #ccc;
+
+      font-size: 11px;
+
+      word-break: break-all;
+    }
+
+
+    /* Canvas пользователю не показываем */
+
+    #canvas {
       display: none;
     }
+
   </style>
 </head>
+
 
 <body>
 
 <div class="container">
 
-  <h1>Data Matrix</h1>
-
   <div id="cameraBox">
-    <video id="video" autoplay playsinline muted></video>
+
+    <video
+      id="video"
+      autoplay
+      playsinline
+      muted>
+    </video>
+
     <div id="aim"></div>
+
   </div>
 
+
   <button id="startButton">
-    Запустить камеру
+    ЗАПУСТИТЬ КАМЕРУ
   </button>
+
 
   <button id="scanButton">
     РАСПОЗНАТЬ
   </button>
 
+
   <div id="status">
     Запустите камеру
   </div>
 
+
   <div id="lastCode"></div>
+
 
   <canvas id="canvas"></canvas>
 
 </div>
 
+
+
 <script>
+
+/* =====================================================
+   НАСТРОЙКИ
+===================================================== */
 
 const SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycby-aRQONo0El0YySDgfpcGkDG3B9u4vLcweo3AuGZc8P5gXUCBpxt6cwtnv8ut_9jlGSw/exec";
 
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const startButton = document.getElementById("startButton");
-const scanButton = document.getElementById("scanButton");
+
+const video =
+  document.getElementById("video");
+
+const canvas =
+  document.getElementById("canvas");
+
+const startButton =
+  document.getElementById("startButton");
+
+const scanButton =
+  document.getElementById("scanButton");
+
 
 let stream = null;
 let busy = false;
 
 
-/* ==========================
-   КАМЕРА
-========================== */
 
-startButton.onclick = startCamera;
+/* =====================================================
+   ЗАПУСК КАМЕРЫ
+===================================================== */
+
+startButton.onclick =
+  startCamera;
+
 
 async function startCamera() {
 
   try {
 
-    setStatus("Запускаю камеру...", "working");
+    setStatus(
+      "Запускаю камеру...",
+      "working"
+    );
+
 
     stream =
       await navigator.mediaDevices.getUserMedia({
@@ -197,21 +306,31 @@ async function startCamera() {
         },
 
         audio: false
+
       });
 
-    video.srcObject = stream;
+
+    video.srcObject =
+      stream;
+
 
     await video.play();
 
-    startButton.style.display = "none";
-    scanButton.style.display = "block";
+
+    startButton.style.display =
+      "none";
+
+    scanButton.style.display =
+      "block";
+
 
     setStatus(
-      "Поместите Data Matrix примерно в центр рамки"
+      "Наведите рамку на Data Matrix"
     );
 
+
     console.log(
-      "Разрешение:",
+      "Разрешение камеры:",
       video.videoWidth,
       "x",
       video.videoHeight
@@ -219,94 +338,138 @@ async function startCamera() {
 
   }
 
-  catch (e) {
+  catch (error) {
 
-    console.error(e);
+    console.error(error);
 
     setStatus(
-      "Ошибка камеры: " + e,
+      "Не удалось открыть камеру",
       "error"
     );
+
   }
+
 }
 
 
-/* ==========================
-   РАСПОЗНАВАНИЕ
-========================== */
 
-scanButton.onclick = recognize;
+/* =====================================================
+   КНОПКА РАСПОЗНАТЬ
+===================================================== */
+
+scanButton.onclick =
+  recognize;
+
 
 async function recognize() {
 
-  if (busy) return;
-
-  if (!video.videoWidth) {
-    setStatus("Камера ещё не готова", "error");
+  if (busy) {
     return;
   }
 
+
+  if (!video.videoWidth) {
+
+    setStatus(
+      "Камера ещё не готова",
+      "error"
+    );
+
+    return;
+  }
+
+
   busy = true;
-  scanButton.disabled = true;
+
+  scanButton.disabled =
+    true;
+
 
   setStatus(
-    "Ищу Data Matrix...",
+    "Распознаю...",
     "working"
   );
 
+
   try {
-
-    /*
-      Сначала пробуем разные размеры
-      центральной области.
-
-      1.0 = весь кадр
-      0.70 = 70%
-      0.50 = 50%
-      0.35 = 35%
-    */
-
-    const crops = [
-      1.00,
-      0.70,
-      0.50,
-      0.35
-    ];
 
     let code = null;
 
+
+    /*
+      Сначала пробуем обычное изображение.
+
+      Разные crop позволяют находить
+      как крупный, так и маленький
+      Data Matrix.
+    */
+
+    const crops = [
+
+      1.00,
+      0.75,
+      0.60,
+      0.50,
+      0.40,
+      0.30
+
+    ];
+
+
     for (const crop of crops) {
 
-      code = await tryFrame(
-        crop,
-        false
-      );
+      code =
+        await tryFrame(
+          crop,
+          false
+        );
 
-      if (code) break;
+
+      if (code) {
+        break;
+      }
+
     }
 
 
+
     /*
-      Если обычные варианты не помогли,
-      пробуем усиленный контраст.
+      Если не нашли —
+      повторяем с усиленным контрастом.
     */
 
     if (!code) {
 
-      for (const crop of [
-        0.70,
+      const enhancedCrops = [
+
+        0.75,
+        0.60,
         0.50,
-        0.35
-      ]) {
+        0.40,
+        0.30
 
-        code = await tryFrame(
-          crop,
-          true
-        );
+      ];
 
-        if (code) break;
+
+      for (
+        const crop of enhancedCrops
+      ) {
+
+        code =
+          await tryFrame(
+            crop,
+            true
+          );
+
+
+        if (code) {
+          break;
+        }
+
       }
+
     }
+
 
 
     if (!code) {
@@ -314,68 +477,124 @@ async function recognize() {
       throw new Error(
         "Data Matrix не найден"
       );
+
     }
+
 
 
     showCode(code);
 
+
     setStatus(
-      "Код найден. Сохраняю...",
+      "Сохраняю...",
       "working"
     );
+
 
 
     await saveCode(code);
 
 
+
     setStatus(
-      "✓ Сохранено",
+      "✓ СОХРАНЕНО",
       "success"
     );
 
 
+
+    /*
+      Короткая вибрация после
+      успешной записи.
+    */
+
     if (navigator.vibrate) {
+
       navigator.vibrate(100);
+
     }
 
+
+
+    /*
+      Через небольшой промежуток
+      снова показываем приглашение
+      к следующему сканированию.
+    */
+
+    setTimeout(function() {
+
+      setStatus(
+        "Готово. Наведите следующий Data Matrix"
+      );
+
+    }, 900);
+
+
   }
 
-  catch (e) {
+  catch (error) {
 
-    console.error(e);
+    console.error(error);
+
 
     setStatus(
-      "Data Matrix не найден. Наведите рамку точнее и повторите.",
+      "Не найден. Наведите точнее и повторите.",
       "error"
     );
+
   }
 
+
   busy = false;
-  scanButton.disabled = false;
+
+  scanButton.disabled =
+    false;
+
 }
 
 
-/* ==========================
-   ОДНА ПОПЫТКА
-========================== */
+
+/* =====================================================
+   ПОПЫТКА РАСПОЗНАВАНИЯ
+===================================================== */
 
 async function tryFrame(
   cropRatio,
   enhance
 ) {
 
-  const sw = video.videoWidth;
-  const sh = video.videoHeight;
+  const sw =
+    video.videoWidth;
+
+  const sh =
+    video.videoHeight;
+
+
+
+  /*
+    Вырезаем квадратную область
+    из центра исходного кадра.
+  */
 
   const cropSize =
     Math.floor(
-      Math.min(sw, sh) * cropRatio
+
+      Math.min(
+        sw,
+        sh
+      )
+
+      * cropRatio
+
     );
+
 
   const sx =
     Math.floor(
       (sw - cropSize) / 2
     );
+
 
   const sy =
     Math.floor(
@@ -383,35 +602,52 @@ async function tryFrame(
     );
 
 
-  /*
-    Не уменьшаем маленький фрагмент.
 
-    Центральные crop-варианты увеличиваем
-    для декодера.
+  /*
+    Центральный участок увеличиваем.
+
+    Максимум 2200x2200,
+    чтобы не перегружать телефон.
   */
 
   const outputSize =
     Math.min(
+
       2200,
+
       Math.max(
         cropSize,
         1400
       )
+
     );
 
 
-  canvas.width = outputSize;
-  canvas.height = outputSize;
+
+  canvas.width =
+    outputSize;
+
+  canvas.height =
+    outputSize;
+
+
 
   const ctx =
     canvas.getContext(
+
       "2d",
+
       {
         willReadFrequently: true
       }
+
     );
 
-  ctx.imageSmoothingEnabled = false;
+
+
+  ctx.imageSmoothingEnabled =
+    false;
+
 
 
   ctx.drawImage(
@@ -431,22 +667,38 @@ async function tryFrame(
   );
 
 
+
   let imageData =
     ctx.getImageData(
+
       0,
       0,
+
       outputSize,
       outputSize
+
     );
 
+
+
+  /*
+    Дополнительная обработка
+    изображения при второй попытке.
+  */
 
   if (enhance) {
 
     enhanceContrast(
       imageData
     );
+
   }
 
+
+
+  /*
+    ZXing-C++ / WASM
+  */
 
   const results =
     await ZXingWASM.readBarcodes(
@@ -454,19 +706,27 @@ async function tryFrame(
       imageData,
 
       {
+
         formats: [
           "DataMatrix"
         ],
 
         tryHarder: true,
+
         tryRotate: true,
+
         tryInvert: true,
+
         tryDownscale: true,
+
         tryDenoise: true,
 
         maxNumberOfSymbols: 1
+
       }
+
     );
+
 
 
   if (
@@ -474,48 +734,99 @@ async function tryFrame(
     results.length > 0
   ) {
 
-    for (const result of results) {
+
+    for (
+      const result of results
+    ) {
+
 
       if (
-  result &&
-  result.isValid
-) {
+        result &&
+        result.isValid
+      ) {
 
-  console.log(
-    "Полный результат ZXing:",
-    result
-  );
 
-  // Для GS1 Data Matrix восстанавливаем исходную строку,
-  // которую ожидает система маркировки.
-  let code = result.text || "";
+        console.log(
+          "ZXing:",
+          result
+        );
 
-  code = code
-    .replace(/^\(01\)/, "01")
-    .replace(/\(21\)/, "21")
-    .replace(/\(91\)/g, "\x1D91")
-    .replace(/\(92\)/g, "\x1D92")
-    .replace(/\(93\)/g, "\x1D93");
 
-  return code;
-}
+        /*
+          ZXing показывает GS1
+          в человекочитаемом виде:
+
+          (01)...(21)...(93)...
+
+          Возвращаем формат,
+          который нужен вам для
+          дальнейшей обработки.
+        */
+
+        let code =
+          result.text || "";
+
+
+        code =
+          code
+
+            .replace(
+              /^\(01\)/,
+              "01"
+            )
+
+            .replace(
+              /\(21\)/,
+              "21"
+            )
+
+            .replace(
+              /\(91\)/g,
+              "\x1D91"
+            )
+
+            .replace(
+              /\(92\)/g,
+              "\x1D92"
+            )
+
+            .replace(
+              /\(93\)/g,
+              "\x1D93"
+            );
+
+
+        return code;
+
+      }
+
     }
+
   }
 
+
   return null;
+
 }
 
 
-/* ==========================
-   УСИЛЕНИЕ КОНТРАСТА
-========================== */
 
-function enhanceContrast(imageData) {
+/* =====================================================
+   УСИЛЕНИЕ КОНТРАСТА
+===================================================== */
+
+function enhanceContrast(
+  imageData
+) {
 
   const data =
     imageData.data;
 
-  const contrast = 1.6;
+
+  const contrast =
+    1.6;
+
+
 
   for (
     let i = 0;
@@ -523,89 +834,161 @@ function enhanceContrast(imageData) {
     i += 4
   ) {
 
+
     const gray =
+
       0.299 * data[i] +
+
       0.587 * data[i + 1] +
+
       0.114 * data[i + 2];
 
 
+
     let value =
-      (gray - 128) *
-      contrast +
-      128;
+
+      (gray - 128)
+
+      * contrast
+
+      + 128;
+
 
 
     value =
       Math.max(
+
         0,
+
         Math.min(
           255,
           value
         )
+
       );
 
 
-    data[i] = value;
-    data[i + 1] = value;
-    data[i + 2] = value;
+
+    data[i] =
+      value;
+
+    data[i + 1] =
+      value;
+
+    data[i + 2] =
+      value;
+
   }
+
 }
 
 
-/* ==========================
-   GOOGLE SHEETS
-========================== */
 
-async function saveCode(code) {
+/* =====================================================
+   ЗАПИСЬ В GOOGLE SHEETS
+===================================================== */
+
+async function saveCode(
+  code
+) {
+
 
   const url =
+
     SCRIPT_URL +
+
     "?code=" +
-    encodeURIComponent(code);
+
+    encodeURIComponent(
+      code
+    );
+
 
 
   await fetch(
+
     url,
+
     {
+
       method: "GET",
+
       mode: "no-cors"
+
     }
+
   );
+
 }
 
 
-/* ==========================
-   ИНТЕРФЕЙС
-========================== */
+
+/* =====================================================
+   СТАТУС
+===================================================== */
 
 function setStatus(
   text,
   className = ""
 ) {
 
+
   const element =
     document.getElementById(
       "status"
     );
 
-  element.innerText = text;
-  element.className = className;
+
+  element.innerText =
+    text;
+
+
+  element.className =
+    className;
+
 }
 
 
-function showCode(code) {
+
+/* =====================================================
+   ПОСЛЕДНИЙ КОД
+===================================================== */
+
+function showCode(
+  code
+) {
+
 
   const element =
     document.getElementById(
       "lastCode"
     );
 
+
   element.style.display =
     "block";
 
+
+  /*
+    Чтобы невидимый GS-разделитель
+    был понятен визуально,
+    только на экране показываем
+    его как <GS>.
+
+    В Google Sheets отправляется
+    настоящий символ ASCII 29.
+  */
+
+  const visibleCode =
+    code.replace(
+      /\x1D/g,
+      "<GS>"
+    );
+
+
   element.innerText =
-    "Распознано:\n" +
-    code;
+    visibleCode;
+
 }
 
 </script>
