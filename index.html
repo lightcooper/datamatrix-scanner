@@ -1,206 +1,246 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-  <meta charset="UTF-8">
 
-  <meta name="viewport"
-        content="width=device-width,
-                 initial-scale=1,
-                 maximum-scale=1,
-                 user-scalable=no">
+<meta charset="UTF-8">
 
-  <title>Data Matrix Scanner</title>
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1,
+               maximum-scale=1,
+               user-scalable=no">
 
-  <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3/dist/iife/reader/index.js"></script>
+<title>Data Matrix Scanner</title>
 
-  <style>
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      background: #111;
-      font-family: Arial, sans-serif;
-    }
-
-    body {
-      padding: 8px;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
-    /* =========================
-       КВАДРАТНАЯ КАМЕРА
-    ========================= */
-
-    #cameraBox {
-      position: relative;
-
-      width: 100%;
-      aspect-ratio: 1 / 1;
-
-      overflow: hidden;
-
-      border-radius: 14px;
-
-      background: #000;
-    }
-
-    #video {
-      position: absolute;
-
-      width: 100%;
-      height: 100%;
-
-      left: 0;
-      top: 0;
-
-      object-fit: cover;
-    }
+<script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3/dist/iife/reader/index.js"></script>
 
 
-    /* =========================
-       РАМКА DATA MATRIX
-    ========================= */
+<style>
 
-    #aim {
-      position: absolute;
+* {
+  box-sizing: border-box;
+}
 
-      width: 55%;
-      height: 55%;
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #111;
+  font-family: Arial, sans-serif;
+}
 
-      left: 22.5%;
-      top: 22.5%;
+body {
+  padding: 8px;
+}
 
-      border: 3px solid white;
-      border-radius: 8px;
-
-      pointer-events: none;
-
-      box-shadow:
-        0 0 0 9999px rgba(0,0,0,0.10);
-    }
-
-
-    /* =========================
-       КНОПКИ
-    ========================= */
-
-    button {
-      width: 100%;
-
-      margin-top: 8px;
-      padding: 17px;
-
-      border: 0;
-      border-radius: 12px;
-
-      font-size: 21px;
-      font-weight: bold;
-
-      cursor: pointer;
-    }
-
-    #startButton {
-      background: #ffffff;
-      color: #111;
-    }
-
-    #scanButton {
-      display: none;
-
-      background: #20a447;
-      color: white;
-    }
-
-    #scanButton:disabled {
-      opacity: 0.55;
-    }
+.container {
+  width: 100%;
+  max-width: 600px;
+  margin: auto;
+}
 
 
-    /* =========================
-       СТАТУС
-    ========================= */
+/* КАМЕРА */
 
-    #status {
-      margin-top: 8px;
-      padding: 10px;
+#cameraBox {
 
-      min-height: 42px;
+  position: relative;
 
-      display: flex;
-      align-items: center;
-      justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
 
-      border-radius: 10px;
+  overflow: hidden;
 
-      background: #222;
-      color: white;
+  border-radius: 14px;
 
-      text-align: center;
-
-      font-size: 15px;
-      font-weight: bold;
-    }
-
-    .success {
-      background: #176b32 !important;
-      color: white !important;
-    }
-
-    .error {
-      background: #9e2020 !important;
-      color: white !important;
-    }
-
-    .working {
-      background: #765b00 !important;
-      color: white !important;
-    }
+  background: #000;
+}
 
 
-    /* =========================
-       ПОСЛЕДНИЙ КОД
-    ========================= */
+#video {
 
-    #lastCode {
-      display: none;
+  position: absolute;
 
-      margin-top: 6px;
-      padding: 8px;
+  width: 100%;
+  height: 100%;
 
-      border-radius: 8px;
+  left: 0;
+  top: 0;
 
-      background: #222;
-      color: #ccc;
-
-      font-size: 11px;
-
-      word-break: break-all;
-    }
+  object-fit: cover;
+}
 
 
-    /* Canvas пользователю не показываем */
+/* РАМКА */
 
-    #canvas {
-      display: none;
-    }
+#aim {
 
-  </style>
+  position: absolute;
+
+  width: 55%;
+  height: 55%;
+
+  left: 22.5%;
+  top: 22.5%;
+
+  border: 3px solid white;
+
+  border-radius: 8px;
+
+  pointer-events: none;
+}
+
+
+/* СЧЁТЧИК */
+
+#counter {
+
+  position: absolute;
+
+  top: 10px;
+  right: 10px;
+
+  z-index: 10;
+
+  padding: 8px 12px;
+
+  border-radius: 20px;
+
+  background: rgba(0,0,0,.75);
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: bold;
+}
+
+
+/* КНОПКИ */
+
+button {
+
+  width: 100%;
+
+  padding: 16px;
+
+  margin-top: 8px;
+
+  border: 0;
+
+  border-radius: 12px;
+
+  font-size: 20px;
+
+  font-weight: bold;
+
+  cursor: pointer;
+}
+
+
+#startButton {
+
+  background: white;
+
+  color: #111;
+}
+
+
+#scanButton {
+
+  display: none;
+
+  background: #20a447;
+
+  color: white;
+}
+
+
+#sendButton {
+
+  display: none;
+
+  background: #1769d2;
+
+  color: white;
+}
+
+
+button:disabled {
+
+  opacity: .5;
+}
+
+
+/* СТАТУС */
+
+#status {
+
+  margin-top: 8px;
+
+  padding: 9px;
+
+  min-height: 40px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: #222;
+
+  color: white;
+
+  text-align: center;
+
+  font-size: 14px;
+
+  font-weight: bold;
+}
+
+
+.success {
+
+  background: #176b32 !important;
+}
+
+
+.error {
+
+  background: #9e2020 !important;
+}
+
+
+.working {
+
+  background: #765b00 !important;
+}
+
+
+.duplicate {
+
+  background: #744a8b !important;
+}
+
+
+#canvas {
+
+  display: none;
+}
+
+</style>
+
 </head>
 
 
 <body>
 
 <div class="container">
+
 
   <div id="cameraBox">
 
@@ -211,7 +251,13 @@
       muted>
     </video>
 
+
     <div id="aim"></div>
+
+
+    <div id="counter">
+      Уникальных: 0
+    </div>
 
   </div>
 
@@ -226,15 +272,18 @@
   </button>
 
 
+  <button id="sendButton">
+    ОТПРАВИТЬ
+  </button>
+
+
   <div id="status">
     Запустите камеру
   </div>
 
 
-  <div id="lastCode"></div>
-
-
   <canvas id="canvas"></canvas>
+
 
 </div>
 
@@ -242,38 +291,54 @@
 
 <script>
 
-/* =====================================================
+/* ===========================
    НАСТРОЙКИ
-===================================================== */
+=========================== */
 
 const SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycby-aRQONo0El0YySDgfpcGkDG3B9u4vLcweo3AuGZc8P5gXUCBpxt6cwtnv8ut_9jlGSw/exec";
+"https://script.google.com/macros/s/AKfycby-aRQONo0El0YySDgfpcGkDG3B9u4vLcweo3AuGZc8P5gXUCBpxt6cwtnv8ut_9jlGSw/exec";
 
 
 const video =
-  document.getElementById("video");
+document.getElementById("video");
 
 const canvas =
-  document.getElementById("canvas");
+document.getElementById("canvas");
 
 const startButton =
-  document.getElementById("startButton");
+document.getElementById("startButton");
 
 const scanButton =
-  document.getElementById("scanButton");
+document.getElementById("scanButton");
+
+const sendButton =
+document.getElementById("sendButton");
+
+const counter =
+document.getElementById("counter");
 
 
 let stream = null;
+
 let busy = false;
 
 
+/*
+  Set автоматически хранит
+  только уникальные значения.
+*/
 
-/* =====================================================
-   ЗАПУСК КАМЕРЫ
-===================================================== */
+const scannedCodes =
+new Set();
+
+
+
+/* ===========================
+   КАМЕРА
+=========================== */
 
 startButton.onclick =
-  startCamera;
+startCamera;
 
 
 async function startCamera() {
@@ -287,53 +352,45 @@ async function startCamera() {
 
 
     stream =
-      await navigator.mediaDevices.getUserMedia({
+    await navigator.mediaDevices.getUserMedia({
 
-        video: {
+      video: {
 
-          facingMode: {
-            ideal: "environment"
-          },
-
-          width: {
-            ideal: 3840
-          },
-
-          height: {
-            ideal: 2160
-          }
-
+        facingMode: {
+          ideal: "environment"
         },
 
-        audio: false
+        width: {
+          ideal: 3840
+        },
 
-      });
+        height: {
+          ideal: 2160
+        }
+
+      },
+
+      audio: false
+
+    });
 
 
     video.srcObject =
-      stream;
+    stream;
 
 
     await video.play();
 
 
     startButton.style.display =
-      "none";
+    "none";
 
     scanButton.style.display =
-      "block";
+    "block";
 
 
     setStatus(
-      "Наведите рамку на Data Matrix"
-    );
-
-
-    console.log(
-      "Разрешение камеры:",
-      video.videoWidth,
-      "x",
-      video.videoHeight
+      "Наведите на Data Matrix"
     );
 
   }
@@ -353,12 +410,12 @@ async function startCamera() {
 
 
 
-/* =====================================================
-   КНОПКА РАСПОЗНАТЬ
-===================================================== */
+/* ===========================
+   РАСПОЗНАТЬ
+=========================== */
 
 scanButton.onclick =
-  recognize;
+recognize;
 
 
 async function recognize() {
@@ -382,7 +439,7 @@ async function recognize() {
   busy = true;
 
   scanButton.disabled =
-    true;
+  true;
 
 
   setStatus(
@@ -396,14 +453,6 @@ async function recognize() {
     let code = null;
 
 
-    /*
-      Сначала пробуем обычное изображение.
-
-      Разные crop позволяют находить
-      как крупный, так и маленький
-      Data Matrix.
-    */
-
     const crops = [
 
       1.00,
@@ -416,13 +465,19 @@ async function recognize() {
     ];
 
 
-    for (const crop of crops) {
+    /*
+      Обычные варианты.
+    */
+
+    for (
+      const crop of crops
+    ) {
 
       code =
-        await tryFrame(
-          crop,
-          false
-        );
+      await tryFrame(
+        crop,
+        false
+      );
 
 
       if (code) {
@@ -432,34 +487,27 @@ async function recognize() {
     }
 
 
-
     /*
-      Если не нашли —
-      повторяем с усиленным контрастом.
+      Усиленный контраст.
     */
 
     if (!code) {
 
-      const enhancedCrops = [
-
-        0.75,
-        0.60,
-        0.50,
-        0.40,
-        0.30
-
-      ];
-
-
       for (
-        const crop of enhancedCrops
+        const crop of [
+          0.75,
+          0.60,
+          0.50,
+          0.40,
+          0.30
+        ]
       ) {
 
         code =
-          await tryFrame(
-            crop,
-            true
-          );
+        await tryFrame(
+          crop,
+          true
+        );
 
 
         if (code) {
@@ -469,7 +517,6 @@ async function recognize() {
       }
 
     }
-
 
 
     if (!code) {
@@ -482,54 +529,46 @@ async function recognize() {
 
 
 
-    showCode(code);
-
-
-    setStatus(
-      "Сохраняю...",
-      "working"
-    );
-
-
-
-    await saveCode(code);
-
-
-
-    setStatus(
-      "✓ СОХРАНЕНО",
-      "success"
-    );
-
-
-
     /*
-      Короткая вибрация после
-      успешной записи.
+      ПРОВЕРКА ДУБЛЯ
     */
 
-    if (navigator.vibrate) {
+    if (
+      scannedCodes.has(code)
+    ) {
 
-      navigator.vibrate(100);
+      setStatus(
+        "⚠ Этот код уже считан",
+        "duplicate"
+      );
+
+
+      vibrateDuplicate();
 
     }
 
+    else {
 
 
-    /*
-      Через небольшой промежуток
-      снова показываем приглашение
-      к следующему сканированию.
-    */
+      /*
+        Добавляем только новый код.
+      */
 
-    setTimeout(function() {
+      scannedCodes.add(code);
+
+
+      updateCounter();
+
 
       setStatus(
-        "Готово. Наведите следующий Data Matrix"
+        "✓ Добавлено",
+        "success"
       );
 
-    }, 900);
 
+      vibrateSuccess();
+
+    }
 
   }
 
@@ -539,7 +578,7 @@ async function recognize() {
 
 
     setStatus(
-      "Не найден. Наведите точнее и повторите.",
+      "Не найден. Попробуйте ещё раз.",
       "error"
     );
 
@@ -549,105 +588,263 @@ async function recognize() {
   busy = false;
 
   scanButton.disabled =
-    false;
+  false;
 
 }
 
 
 
-/* =====================================================
-   ПОПЫТКА РАСПОЗНАВАНИЯ
-===================================================== */
+/* ===========================
+   ОТПРАВИТЬ ПАРТИЮ
+=========================== */
 
-async function tryFrame(
-  cropRatio,
-  enhance
-) {
-
-  const sw =
-    video.videoWidth;
-
-  const sh =
-    video.videoHeight;
+sendButton.onclick =
+sendBatch;
 
 
+async function sendBatch() {
 
-  /*
-    Вырезаем квадратную область
-    из центра исходного кадра.
-  */
-
-  const cropSize =
-    Math.floor(
-
-      Math.min(
-        sw,
-        sh
-      )
-
-      * cropRatio
-
-    );
-
-
-  const sx =
-    Math.floor(
-      (sw - cropSize) / 2
-    );
-
-
-  const sy =
-    Math.floor(
-      (sh - cropSize) / 2
-    );
-
+  if (
+    scannedCodes.size === 0
+  ) {
+    return;
+  }
 
 
   /*
-    Центральный участок увеличиваем.
+    Сохраняем копию партии.
 
-    Максимум 2200x2200,
-    чтобы не перегружать телефон.
+    Оригинальный Set очищаем
+    только ПОСЛЕ отправки.
   */
 
-  const outputSize =
-    Math.min(
+  const codes =
+  Array.from(
+    scannedCodes
+  );
 
-      2200,
 
-      Math.max(
-        cropSize,
-        1400
-      )
+  sendButton.disabled =
+  true;
 
+  scanButton.disabled =
+  true;
+
+
+  setStatus(
+    "Отправляю " +
+    codes.length +
+    " кодов...",
+    "working"
+  );
+
+
+  try {
+
+
+    const url =
+
+    SCRIPT_URL +
+
+    "?codes=" +
+
+    encodeURIComponent(
+      JSON.stringify(codes)
     );
 
 
 
-  canvas.width =
-    outputSize;
+    /*
+      В режиме no-cors браузер
+      отправляет запрос, но не может
+      прочитать ответ Apps Script.
+    */
 
-  canvas.height =
-    outputSize;
+    await fetch(
 
-
-
-  const ctx =
-    canvas.getContext(
-
-      "2d",
+      url,
 
       {
-        willReadFrequently: true
+        method: "GET",
+        mode: "no-cors"
       }
 
     );
 
 
 
-  ctx.imageSmoothingEnabled =
-    false;
+    /*
+      После успешной отправки
+      очищаем локальную партию.
+    */
 
+    scannedCodes.clear();
+
+
+    updateCounter();
+
+
+    setStatus(
+      "✓ Партия отправлена: " +
+      codes.length,
+      "success"
+    );
+
+
+    if (navigator.vibrate) {
+
+      navigator.vibrate(
+        [100, 80, 100]
+      );
+
+    }
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+
+    /*
+      Если запрос реально не ушёл,
+      список НЕ очищается.
+    */
+
+    setStatus(
+      "Ошибка отправки. Коды сохранены.",
+      "error"
+    );
+
+  }
+
+
+  sendButton.disabled =
+  false;
+
+  scanButton.disabled =
+  false;
+
+}
+
+
+
+/* ===========================
+   СЧЁТЧИК
+=========================== */
+
+function updateCounter() {
+
+
+  const count =
+  scannedCodes.size;
+
+
+  counter.innerText =
+  "Уникальных: " +
+  count;
+
+
+  if (count > 0) {
+
+    sendButton.style.display =
+    "block";
+
+
+    sendButton.innerText =
+    "ОТПРАВИТЬ (" +
+    count +
+    ")";
+
+  }
+
+  else {
+
+    sendButton.style.display =
+    "none";
+
+  }
+
+}
+
+
+
+/* ===========================
+   РАСПОЗНАВАНИЕ КАДРА
+=========================== */
+
+async function tryFrame(
+  cropRatio,
+  enhance
+) {
+
+
+  const sw =
+  video.videoWidth;
+
+  const sh =
+  video.videoHeight;
+
+
+  const cropSize =
+  Math.floor(
+
+    Math.min(
+      sw,
+      sh
+    )
+
+    * cropRatio
+
+  );
+
+
+  const sx =
+  Math.floor(
+    (sw - cropSize) / 2
+  );
+
+
+  const sy =
+  Math.floor(
+    (sh - cropSize) / 2
+  );
+
+
+  const outputSize =
+  Math.min(
+
+    2200,
+
+    Math.max(
+      cropSize,
+      1400
+    )
+
+  );
+
+
+  canvas.width =
+  outputSize;
+
+  canvas.height =
+  outputSize;
+
+
+  const ctx =
+  canvas.getContext(
+
+    "2d",
+
+    {
+      willReadFrequently: true
+    }
+
+  );
+
+
+  ctx.imageSmoothingEnabled =
+  false;
 
 
   ctx.drawImage(
@@ -667,24 +864,17 @@ async function tryFrame(
   );
 
 
-
   let imageData =
-    ctx.getImageData(
+  ctx.getImageData(
 
-      0,
-      0,
+    0,
+    0,
 
-      outputSize,
-      outputSize
+    outputSize,
+    outputSize
 
-    );
+  );
 
-
-
-  /*
-    Дополнительная обработка
-    изображения при второй попытке.
-  */
 
   if (enhance) {
 
@@ -695,38 +885,32 @@ async function tryFrame(
   }
 
 
-
-  /*
-    ZXing-C++ / WASM
-  */
-
   const results =
-    await ZXingWASM.readBarcodes(
+  await ZXingWASM.readBarcodes(
 
-      imageData,
+    imageData,
 
-      {
+    {
 
-        formats: [
-          "DataMatrix"
-        ],
+      formats: [
+        "DataMatrix"
+      ],
 
-        tryHarder: true,
+      tryHarder: true,
 
-        tryRotate: true,
+      tryRotate: true,
 
-        tryInvert: true,
+      tryInvert: true,
 
-        tryDownscale: true,
+      tryDownscale: true,
 
-        tryDenoise: true,
+      tryDenoise: true,
 
-        maxNumberOfSymbols: 1
+      maxNumberOfSymbols: 1
 
-      }
+    }
 
-    );
-
+  );
 
 
   if (
@@ -746,54 +930,42 @@ async function tryFrame(
       ) {
 
 
-        console.log(
-          "ZXing:",
-          result
-        );
+        let code =
+        result.text || "";
 
 
         /*
-          ZXing показывает GS1
-          в человекочитаемом виде:
-
-          (01)...(21)...(93)...
-
-          Возвращаем формат,
-          который нужен вам для
-          дальнейшей обработки.
+          Возвращаем GS1 в нужный
+          вам формат.
         */
 
-        let code =
-          result.text || "";
-
-
         code =
-          code
+        code
 
-            .replace(
-              /^\(01\)/,
-              "01"
-            )
+        .replace(
+          /^\(01\)/,
+          "01"
+        )
 
-            .replace(
-              /\(21\)/,
-              "21"
-            )
+        .replace(
+          /\(21\)/,
+          "21"
+        )
 
-            .replace(
-              /\(91\)/g,
-              "\x1D91"
-            )
+        .replace(
+          /\(91\)/g,
+          "\x1D91"
+        )
 
-            .replace(
-              /\(92\)/g,
-              "\x1D92"
-            )
+        .replace(
+          /\(92\)/g,
+          "\x1D92"
+        )
 
-            .replace(
-              /\(93\)/g,
-              "\x1D93"
-            );
+        .replace(
+          /\(93\)/g,
+          "\x1D93"
+        );
 
 
         return code;
@@ -811,21 +983,21 @@ async function tryFrame(
 
 
 
-/* =====================================================
-   УСИЛЕНИЕ КОНТРАСТА
-===================================================== */
+/* ===========================
+   КОНТРАСТ
+=========================== */
 
 function enhanceContrast(
   imageData
 ) {
 
+
   const data =
-    imageData.data;
+  imageData.data;
 
 
   const contrast =
-    1.6;
-
+  1.6;
 
 
   for (
@@ -837,46 +1009,43 @@ function enhanceContrast(
 
     const gray =
 
-      0.299 * data[i] +
+    0.299 * data[i] +
 
-      0.587 * data[i + 1] +
+    0.587 * data[i + 1] +
 
-      0.114 * data[i + 2];
-
+    0.114 * data[i + 2];
 
 
     let value =
 
-      (gray - 128)
+    (gray - 128)
 
-      * contrast
+    * contrast
 
-      + 128;
-
+    + 128;
 
 
     value =
-      Math.max(
+    Math.max(
 
-        0,
+      0,
 
-        Math.min(
-          255,
-          value
-        )
+      Math.min(
+        255,
+        value
+      )
 
-      );
-
+    );
 
 
     data[i] =
-      value;
+    value;
 
     data[i + 1] =
-      value;
+    value;
 
     data[i + 2] =
-      value;
+    value;
 
   }
 
@@ -884,48 +1053,44 @@ function enhanceContrast(
 
 
 
-/* =====================================================
-   ЗАПИСЬ В GOOGLE SHEETS
-===================================================== */
+/* ===========================
+   ВИБРАЦИЯ
+=========================== */
 
-async function saveCode(
-  code
-) {
+function vibrateSuccess() {
 
+  if (
+    navigator.vibrate
+  ) {
 
-  const url =
-
-    SCRIPT_URL +
-
-    "?code=" +
-
-    encodeURIComponent(
-      code
+    navigator.vibrate(
+      80
     );
 
+  }
+
+}
 
 
-  await fetch(
+function vibrateDuplicate() {
 
-    url,
+  if (
+    navigator.vibrate
+  ) {
 
-    {
+    navigator.vibrate(
+      [50, 50, 50]
+    );
 
-      method: "GET",
-
-      mode: "no-cors"
-
-    }
-
-  );
+  }
 
 }
 
 
 
-/* =====================================================
+/* ===========================
    СТАТУС
-===================================================== */
+=========================== */
 
 function setStatus(
   text,
@@ -934,64 +1099,22 @@ function setStatus(
 
 
   const element =
-    document.getElementById(
-      "status"
-    );
+  document.getElementById(
+    "status"
+  );
 
 
   element.innerText =
-    text;
+  text;
 
 
   element.className =
-    className;
-
-}
-
-
-
-/* =====================================================
-   ПОСЛЕДНИЙ КОД
-===================================================== */
-
-function showCode(
-  code
-) {
-
-
-  const element =
-    document.getElementById(
-      "lastCode"
-    );
-
-
-  element.style.display =
-    "block";
-
-
-  /*
-    Чтобы невидимый GS-разделитель
-    был понятен визуально,
-    только на экране показываем
-    его как <GS>.
-
-    В Google Sheets отправляется
-    настоящий символ ASCII 29.
-  */
-
-  const visibleCode =
-    code.replace(
-      /\x1D/g,
-      "<GS>"
-    );
-
-
-  element.innerText =
-    visibleCode;
+  className;
 
 }
 
 </script>
 
 </body>
+
 </html>
