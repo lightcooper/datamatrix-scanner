@@ -10,9 +10,13 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      padding: 15px;
+      padding: 12px;
       font-family: Arial, sans-serif;
       background: #f3f3f3;
     }
@@ -24,45 +28,83 @@
 
     h1 {
       text-align: center;
-      font-size: 24px;
+      font-size: 22px;
+      margin: 8px 0 12px;
     }
 
-    #reader {
+    #cameraBox {
+      position: relative;
       width: 100%;
-      background: black;
-      border-radius: 15px;
       overflow: hidden;
+      border-radius: 15px;
+      background: #000;
+    }
+
+    #video {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* Рамка, куда желательно поместить Data Matrix */
+    #aim {
+      position: absolute;
+      width: 45%;
+      aspect-ratio: 1 / 1;
+      left: 27.5%;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 3px solid white;
+      border-radius: 8px;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.12);
+    }
+
+    #startButton,
+    #scanButton {
+      width: 100%;
+      padding: 18px;
+      margin-top: 12px;
+      border: 0;
+      border-radius: 12px;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #startButton {
+      background: #222;
+      color: white;
+    }
+
+    #scanButton {
+      background: #146c2e;
+      color: white;
+      display: none;
+    }
+
+    #scanButton:disabled {
+      opacity: 0.5;
     }
 
     #status {
-      margin-top: 15px;
+      margin-top: 12px;
       padding: 15px;
-      background: white;
       border-radius: 12px;
+      background: white;
       text-align: center;
-      font-size: 18px;
+      font-size: 17px;
       font-weight: bold;
     }
 
     #lastCode {
+      display: none;
       margin-top: 10px;
       padding: 12px;
       background: white;
       border-radius: 12px;
+      font-size: 13px;
       word-break: break-all;
-      display: none;
-    }
-
-    button {
-      width: 100%;
-      margin-top: 15px;
-      padding: 18px;
-      border: 0;
-      border-radius: 12px;
-      background: #222;
-      color: white;
-      font-size: 18px;
-      font-weight: bold;
     }
 
     .success {
@@ -70,13 +112,18 @@
       color: #176b32;
     }
 
-    .saving {
-      background: #fff3cd !important;
-    }
-
     .error {
       background: #ffe0e0 !important;
       color: #a00000;
+    }
+
+    .working {
+      background: #fff3cd !important;
+      color: #6b5700;
+    }
+
+    #debugCanvas {
+      display: none;
     }
   </style>
 </head>
@@ -87,173 +134,342 @@
 
   <h1>Data Matrix</h1>
 
-  <div id="reader"></div>
+  <div id="cameraBox">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="aim"></div>
+  </div>
+
+  <button id="startButton">
+    Запустить камеру
+  </button>
+
+  <button id="scanButton">
+    РАСПОЗНАТЬ
+  </button>
 
   <div id="status">
-    Нажмите «Запустить сканер»
+    Запустите камеру
   </div>
 
   <div id="lastCode"></div>
 
-  <button id="startButton" onclick="startScanner()">
-    Запустить сканер
-  </button>
+  <canvas id="debugCanvas"></canvas>
 
 </div>
+
 
 <script>
 
 const SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycby-aRQONo0El0YySDgfpcGkDG3B9u4vLcweo3AuGZc8P5gXUCBpxt6cwtnv8ut_9jlGSw/exec";
 
-let scanner;
-let saving = false;
+const video = document.getElementById("video");
+const canvas = document.getElementById("debugCanvas");
 
-let lastCode = "";
-let lastTime = 0;
+const startButton =
+  document.getElementById("startButton");
+
+const scanButton =
+  document.getElementById("scanButton");
+
+let stream = null;
+let decoder = null;
+let busy = false;
 
 
-async function startScanner() {
+/* =========================
+   ЗАПУСК КАМЕРЫ
+========================= */
 
-  document.getElementById("startButton").style.display = "none";
-  setStatus("Запускаю камеру...");
+startButton.addEventListener("click", startCamera);
 
-  scanner = new Html5Qrcode(
-    "reader",
-    {
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.DATA_MATRIX
-      ],
-      verbose: false
-    }
-  );
+async function startCamera() {
 
   try {
 
-    await scanner.start(
+    setStatus("Запускаю камеру...", "working");
 
-      {
+    stream = await navigator.mediaDevices.getUserMedia({
+
+      video: {
+
         facingMode: {
-          exact: "environment"
-        }
-      },
-
-      {
-        fps: 20,
-
-        videoConstraints: {
-          facingMode: "environment",
-
-          width: {
-            ideal: 1920
-          },
-
-          height: {
-            ideal: 1080
-          },
-
-          focusMode: "continuous"
+          ideal: "environment"
         },
 
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
+        width: {
+          ideal: 3840
+        },
 
-          const size = Math.floor(
-            Math.min(viewfinderWidth, viewfinderHeight) * 0.75
-          );
-
-          return {
-            width: size,
-            height: size
-          };
+        height: {
+          ideal: 2160
         }
+
       },
 
-      scanSuccess,
+      audio: false
+    });
 
-      function() {}
+
+    video.srcObject = stream;
+
+    await video.play();
+
+
+    /*
+      Создаём декодер.
+
+      Он не сканирует видеопоток постоянно.
+      Используем его только после нажатия кнопки.
+    */
+
+    decoder = new Html5Qrcode(
+      "hidden-reader",
+      {
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.DATA_MATRIX
+        ]
+      }
     );
+
+
+    startButton.style.display = "none";
+    scanButton.style.display = "block";
 
     setStatus(
-      "Поместите Data Matrix внутрь рамки"
+      "Наведите рамку на Data Matrix и нажмите «Распознать»"
     );
 
-    setStatus("Поместите Data Matrix внутрь рамки");
 
-// Автоматически устанавливаем зум камеры
-try {
+    /*
+      Показываем фактическое разрешение,
+      которое дала камера.
+    */
 
-  const video = document.querySelector("#reader video");
+    console.log(
+      "Camera resolution:",
+      video.videoWidth,
+      "x",
+      video.videoHeight
+    );
 
-  if (video && video.srcObject) {
 
-    const track = video.srcObject.getVideoTracks()[0];
-    const capabilities = track.getCapabilities();
-
-    if (capabilities.zoom) {
-
-      const desiredZoom = 4.0;
-
-      const zoom = Math.min(
-        capabilities.zoom.max,
-        Math.max(capabilities.zoom.min, desiredZoom)
-      );
-
-      await track.applyConstraints({
-        advanced: [
-          { zoom: zoom }
-        ]
-      });
-
-      console.log("Установлен зум:", zoom);
-    }
-  }
-
-} catch (e) {
-  console.log("Автозум не поддерживается:", e);
-}
-
-  }
-
-  catch (error) {
+  } catch (error) {
 
     console.error(error);
 
     setStatus(
-      "Ошибка камеры: " + error,
+      "Не удалось открыть камеру: " + error,
       "error"
     );
-
-    document.getElementById("startButton").style.display = "block";
   }
 }
 
 
-function scanSuccess(code) {
+/* =========================
+   КНОПКА РАСПОЗНАТЬ
+========================= */
 
-  if (saving) return;
+scanButton.addEventListener(
+  "click",
+  captureAndDecode
+);
 
-  const now = Date.now();
 
-  // Не записываем один и тот же код несколько раз подряд
-  if (
-    code === lastCode &&
-    now - lastTime < 5000
-  ) {
+async function captureAndDecode() {
+
+  if (busy) return;
+
+  if (!video.videoWidth) {
+
+    setStatus(
+      "Камера ещё не готова",
+      "error"
+    );
+
     return;
   }
 
-  saving = true;
 
-  lastCode = code;
-  lastTime = now;
-
-  showCode(code);
+  busy = true;
+  scanButton.disabled = true;
 
   setStatus(
-    "Сохраняю...",
-    "saving"
+    "Распознаю...",
+    "working"
   );
 
+
+  try {
+
+    /*
+      Получаем кадр в НАТИВНОМ разрешении камеры.
+    */
+
+    const sourceWidth =
+      video.videoWidth;
+
+    const sourceHeight =
+      video.videoHeight;
+
+
+    /*
+      Берём центральную область изображения.
+
+      55% ширины и высоты.
+
+      Это фактически цифровое увеличение:
+      маленький Data Matrix получает намного
+      больше пикселей при распознавании.
+    */
+
+    const cropSize =
+      Math.floor(
+        Math.min(
+          sourceWidth,
+          sourceHeight
+        ) * 0.55
+      );
+
+
+    const sx =
+      Math.floor(
+        (sourceWidth - cropSize) / 2
+      );
+
+    const sy =
+      Math.floor(
+        (sourceHeight - cropSize) / 2
+      );
+
+
+    /*
+      Увеличиваем вырезанный участок
+      до 1600 x 1600.
+    */
+
+    canvas.width = 1600;
+    canvas.height = 1600;
+
+    const ctx =
+      canvas.getContext("2d");
+
+
+    ctx.imageSmoothingEnabled = false;
+
+
+    ctx.drawImage(
+
+      video,
+
+      sx,
+      sy,
+      cropSize,
+      cropSize,
+
+      0,
+      0,
+      1600,
+      1600
+
+    );
+
+
+    /*
+      Canvas -> изображение.
+    */
+
+    const imageData =
+      canvas.toDataURL(
+        "image/png"
+      );
+
+
+    /*
+      DataURL превращаем в Blob/File,
+      который html5-qrcode умеет
+      распознавать как фотографию.
+    */
+
+    const response =
+      await fetch(imageData);
+
+    const blob =
+      await response.blob();
+
+    const file =
+      new File(
+        [blob],
+        "capture.png",
+        {
+          type: "image/png"
+        }
+      );
+
+
+    /*
+      Распознаём фотографию.
+    */
+
+    const result =
+      await decoder.scanFile(
+        file,
+        false
+      );
+
+
+    if (!result) {
+
+      throw new Error(
+        "Data Matrix не найден"
+      );
+    }
+
+
+    showCode(result);
+
+    setStatus(
+      "Код найден. Сохраняю...",
+      "working"
+    );
+
+
+    await saveCode(result);
+
+
+    setStatus(
+      "✓ Сохранено",
+      "success"
+    );
+
+
+    if (navigator.vibrate) {
+      navigator.vibrate(100);
+    }
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    setStatus(
+      "Data Matrix не найден. Попробуйте ещё раз.",
+      "error"
+    );
+
+  }
+
+
+  busy = false;
+  scanButton.disabled = false;
+}
+
+
+/* =========================
+   СОХРАНЕНИЕ В GOOGLE SHEETS
+========================= */
+
+async function saveCode(code) {
 
   const url =
     SCRIPT_URL +
@@ -261,53 +477,24 @@ function scanSuccess(code) {
     encodeURIComponent(code);
 
 
-  fetch(url, {
-    method: "GET",
-    mode: "no-cors"
-  })
-
-  .then(function() {
-
-    setStatus(
-      "✓ Сохранено",
-      "success"
-    );
-
-    if (navigator.vibrate) {
-      navigator.vibrate(100);
+  await fetch(
+    url,
+    {
+      method: "GET",
+      mode: "no-cors"
     }
-
-    setTimeout(function() {
-
-      saving = false;
-
-      setStatus(
-        "Наведите на следующий Data Matrix"
-      );
-
-    }, 1000);
-
-  })
-
-  .catch(function(error) {
-
-    console.error(error);
-
-    setStatus(
-      "Ошибка отправки",
-      "error"
-    );
-
-    setTimeout(function() {
-      saving = false;
-    }, 2000);
-
-  });
-
+  );
 }
 
 
-function setStatus(text, className = "") {
+/* =========================
+   ИНТЕРФЕЙС
+========================= */
+
+function setStatus(
+  text,
+  className = ""
+) {
 
   const status =
     document.getElementById("status");
@@ -325,10 +512,20 @@ function showCode(code) {
   element.style.display = "block";
 
   element.innerText =
-    "Последний код:\n" + code;
+    "Распознано:\n" + code;
 }
 
 </script>
+
+
+<!--
+  Этот элемент нужен библиотеке html5-qrcode,
+  но пользователю его показывать не нужно.
+-->
+<div
+  id="hidden-reader"
+  style="display:none">
+</div>
 
 </body>
 </html>
