@@ -177,6 +177,41 @@ async function startScanner() {
       "Поместите Data Matrix внутрь рамки"
     );
 
+    setStatus("Поместите Data Matrix внутрь рамки");
+
+// Автоматически устанавливаем зум камеры
+try {
+
+  const video = document.querySelector("#reader video");
+
+  if (video && video.srcObject) {
+
+    const track = video.srcObject.getVideoTracks()[0];
+    const capabilities = track.getCapabilities();
+
+    if (capabilities.zoom) {
+
+      const desiredZoom = 2.0;
+
+      const zoom = Math.min(
+        capabilities.zoom.max,
+        Math.max(capabilities.zoom.min, desiredZoom)
+      );
+
+      await track.applyConstraints({
+        advanced: [
+          { zoom: zoom }
+        ]
+      });
+
+      console.log("Установлен зум:", zoom);
+    }
+  }
+
+} catch (e) {
+  console.log("Автозум не поддерживается:", e);
+}
+
   }
 
   catch (error) {
