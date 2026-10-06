@@ -69,6 +69,33 @@ body {
   object-fit: cover;
 }
 
+      /* Убираем системные элементы управления видео */
+
+#video::-webkit-media-controls {
+  display: none !important;
+}
+
+#video::-webkit-media-controls-panel {
+  display: none !important;
+}
+
+#video::-webkit-media-controls-play-button {
+  display: none !important;
+}
+
+#video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
+#video::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+}
+
+#video {
+  pointer-events: none;
+}
+
 
 /* РАМКА */
 
@@ -259,11 +286,13 @@ button:disabled {
   <div id="cameraBox">
 
     <video
-      id="video"
-      autoplay
-      playsinline
-      muted>
-    </video>
+  id="video"
+  autoplay
+  playsinline
+  muted
+  disablepictureinpicture
+  controlslist="nodownload nofullscreen noremoteplayback">
+</video>
 
 
     <div id="aim"></div>
