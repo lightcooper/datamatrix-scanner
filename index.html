@@ -15,7 +15,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@3/dist/iife/reader/index.js"></script>
 
-
 <style>
 
 * {
@@ -41,9 +40,12 @@ body {
 }
 
 
-/* КАМЕРА */
+/* =========================
+   КАМЕРА
+========================= */
 
 #cameraBox {
+
   position: relative;
 
   width: 100%;
@@ -57,7 +59,37 @@ body {
 }
 
 
+/*
+  Настоящий video скрыт.
+
+  iPhone не сможет показать
+  поверх него Play/Pause.
+*/
+
 #video {
+
+  position: fixed;
+
+  width: 1px;
+  height: 1px;
+
+  left: -10000px;
+  top: -10000px;
+
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+
+/*
+  Пользователь видит canvas,
+  на который постоянно копируется
+  изображение с камеры.
+*/
+
+#previewCanvas {
+
   position: absolute;
 
   width: 100%;
@@ -66,40 +98,18 @@ body {
   left: 0;
   top: 0;
 
-  object-fit: cover;
-}
+  display: block;
 
-      /* Убираем системные элементы управления видео */
-
-#video::-webkit-media-controls {
-  display: none !important;
-}
-
-#video::-webkit-media-controls-panel {
-  display: none !important;
-}
-
-#video::-webkit-media-controls-play-button {
-  display: none !important;
-}
-
-#video::-webkit-media-controls-start-playback-button {
-  display: none !important;
-  -webkit-appearance: none;
-}
-
-#video::-webkit-media-controls-overlay-play-button {
-  display: none !important;
-}
-
-#video {
-  pointer-events: none;
+  background: #000;
 }
 
 
-/* РАМКА */
+/* =========================
+   РАМКА
+========================= */
 
 #aim {
+
   position: absolute;
 
   width: 55%;
@@ -113,12 +123,17 @@ body {
   border-radius: 8px;
 
   pointer-events: none;
+
+  z-index: 5;
 }
 
 
-/* СЧЁТЧИК */
+/* =========================
+   СЧЁТЧИК
+========================= */
 
 #counter {
+
   position: absolute;
 
   top: 10px;
@@ -140,9 +155,12 @@ body {
 }
 
 
-/* КНОПКИ */
+/* =========================
+   КНОПКИ
+========================= */
 
 button {
+
   width: 100%;
 
   padding: 16px;
@@ -162,12 +180,14 @@ button {
 
 
 #startButton {
+
   background: white;
   color: #111;
 }
 
 
 #scanButton {
+
   display: none;
 
   background: #20a447;
@@ -176,6 +196,7 @@ button {
 
 
 #sendButton {
+
   display: none;
 
   background: #1769d2;
@@ -184,13 +205,17 @@ button {
 
 
 button:disabled {
+
   opacity: .5;
 }
 
 
-/* КОММЕНТАРИЙ */
+/* =========================
+   КОММЕНТАРИЙ
+========================= */
 
 #comment {
+
   display: none;
 
   width: 100%;
@@ -204,7 +229,6 @@ button:disabled {
   border-radius: 10px;
 
   background: white;
-
   color: #111;
 
   font-family: Arial, sans-serif;
@@ -216,13 +240,17 @@ button:disabled {
 
 
 #comment::placeholder {
+
   color: #777;
 }
 
 
-/* СТАТУС */
+/* =========================
+   СТАТУС
+========================= */
 
 #status {
+
   margin-top: 8px;
 
   padding: 9px;
@@ -232,13 +260,11 @@ button:disabled {
   display: flex;
 
   align-items: center;
-
   justify-content: center;
 
   border-radius: 10px;
 
   background: #222;
-
   color: white;
 
   text-align: center;
@@ -250,26 +276,36 @@ button:disabled {
 
 
 .success {
+
   background: #176b32 !important;
 }
 
 
 .error {
+
   background: #9e2020 !important;
 }
 
 
 .working {
+
   background: #765b00 !important;
 }
 
 
 .duplicate {
+
   background: #744a8b !important;
 }
 
 
-#canvas {
+/*
+  Этот canvas используется
+  только для ZXing.
+*/
+
+#scanCanvas {
+
   display: none;
 }
 
@@ -285,22 +321,34 @@ button:disabled {
 
   <div id="cameraBox">
 
-    <video
-  id="video"
-  autoplay
-  playsinline
-  muted
-  disablepictureinpicture
-  controlslist="nodownload nofullscreen noremoteplayback">
-</video>
 
+    <!-- Настоящее видео скрыто -->
+
+    <video
+      id="video"
+      autoplay
+      playsinline
+      muted
+      disablepictureinpicture>
+    </video>
+
+
+    <!-- Видимое изображение камеры -->
+
+    <canvas id="previewCanvas"></canvas>
+
+
+    <!-- Рамка -->
 
     <div id="aim"></div>
 
 
+    <!-- Счётчик -->
+
     <div id="counter">
       Счетчик кодов: 0
     </div>
+
 
   </div>
 
@@ -331,7 +379,9 @@ button:disabled {
   </div>
 
 
-  <canvas id="canvas"></canvas>
+  <!-- Canvas для распознавания -->
+
+  <canvas id="scanCanvas"></canvas>
 
 
 </div>
@@ -341,9 +391,9 @@ button:disabled {
 <script>
 
 
-/* ===========================
+/* =====================================================
    НАСТРОЙКИ
-=========================== */
+===================================================== */
 
 const SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycby-aRQONo0El0YySDgfpcGkDG3B9u4vLcweo3AuGZc8P5gXUCBpxt6cwtnv8ut_9jlGSw/exec";
@@ -352,32 +402,45 @@ const SCRIPT_URL =
 const video =
 document.getElementById("video");
 
-const canvas =
-document.getElementById("canvas");
+
+const previewCanvas =
+document.getElementById("previewCanvas");
+
+
+const scanCanvas =
+document.getElementById("scanCanvas");
+
 
 const startButton =
 document.getElementById("startButton");
 
+
 const scanButton =
 document.getElementById("scanButton");
+
 
 const sendButton =
 document.getElementById("sendButton");
 
+
 const commentInput =
 document.getElementById("comment");
+
 
 const counter =
 document.getElementById("counter");
 
 
 let stream = null;
+
 let busy = false;
+
+let previewRunning = false;
 
 
 /*
   Set хранит только
-  уникальные Data Matrix.
+  уникальные коды.
 */
 
 const scannedCodes =
@@ -385,9 +448,9 @@ new Set();
 
 
 
-/* ===========================
-   КАМЕРА
-=========================== */
+/* =====================================================
+   ЗАПУСК КАМЕРЫ
+===================================================== */
 
 startButton.onclick =
 startCamera;
@@ -434,18 +497,44 @@ async function startCamera() {
     await video.play();
 
 
+    /*
+      Ждём, пока браузер действительно
+      получит размеры видеопотока.
+    */
+
+    await waitForVideo();
+
+
     startButton.style.display =
     "none";
 
+
     scanButton.style.display =
     "block";
+
 
     commentInput.style.display =
     "block";
 
 
+    /*
+      Запускаем собственный
+      canvas-видоискатель.
+    */
+
+    startPreview();
+
+
     setStatus(
       "Наведите на Data Matrix"
+    );
+
+
+    console.log(
+      "Камера:",
+      video.videoWidth,
+      "x",
+      video.videoHeight
     );
 
   }
@@ -453,6 +542,7 @@ async function startCamera() {
   catch (error) {
 
     console.error(error);
+
 
     setStatus(
       "Не удалось открыть камеру",
@@ -465,9 +555,185 @@ async function startCamera() {
 
 
 
-/* ===========================
+/* =====================================================
+   ОЖИДАНИЕ КАМЕРЫ
+===================================================== */
+
+function waitForVideo() {
+
+  return new Promise(resolve => {
+
+
+    if (
+      video.videoWidth > 0 &&
+      video.videoHeight > 0
+    ) {
+
+      resolve();
+
+      return;
+
+    }
+
+
+    const check =
+    setInterval(function() {
+
+
+      if (
+        video.videoWidth > 0 &&
+        video.videoHeight > 0
+      ) {
+
+        clearInterval(check);
+
+        resolve();
+
+      }
+
+    }, 50);
+
+  });
+
+}
+
+
+
+/* =====================================================
+   CANVAS-ВИДОИСКАТЕЛЬ
+===================================================== */
+
+function startPreview() {
+
+  if (previewRunning) {
+    return;
+  }
+
+
+  previewRunning = true;
+
+
+  const ctx =
+  previewCanvas.getContext(
+    "2d",
+    {
+      alpha: false
+    }
+  );
+
+
+  function drawPreview() {
+
+
+    if (
+      !previewRunning
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      video.readyState >= 2 &&
+      video.videoWidth > 0
+    ) {
+
+
+      const sw =
+      video.videoWidth;
+
+
+      const sh =
+      video.videoHeight;
+
+
+      /*
+        Делаем квадрат из центра
+        исходного изображения.
+
+        Это соответствует прежнему
+        object-fit: cover.
+      */
+
+      const size =
+      Math.min(
+        sw,
+        sh
+      );
+
+
+      const sx =
+      Math.floor(
+        (sw - size) / 2
+      );
+
+
+      const sy =
+      Math.floor(
+        (sh - size) / 2
+      );
+
+
+      /*
+        Для видоискателя 900x900
+        более чем достаточно.
+
+        ZXing всё равно работает
+        с исходным video отдельно.
+      */
+
+      if (
+        previewCanvas.width !== 900 ||
+        previewCanvas.height !== 900
+      ) {
+
+        previewCanvas.width =
+        900;
+
+        previewCanvas.height =
+        900;
+
+      }
+
+
+      ctx.drawImage(
+
+        video,
+
+        sx,
+        sy,
+        size,
+        size,
+
+        0,
+        0,
+        900,
+        900
+
+      );
+
+    }
+
+
+    requestAnimationFrame(
+      drawPreview
+    );
+
+  }
+
+
+  requestAnimationFrame(
+    drawPreview
+  );
+
+}
+
+
+
+/* =====================================================
    РАСПОЗНАТЬ
-=========================== */
+===================================================== */
 
 scanButton.onclick =
 recognize;
@@ -493,6 +759,7 @@ async function recognize() {
 
   busy = true;
 
+
   scanButton.disabled =
   true;
 
@@ -505,17 +772,21 @@ async function recognize() {
 
   try {
 
+
     let code = null;
 
 
     const crops = [
+
       1.00,
       0.75,
       0.60,
       0.50,
       0.40,
       0.30
+
     ];
+
 
 
     /*
@@ -525,6 +796,7 @@ async function recognize() {
     for (
       const crop of crops
     ) {
+
 
       code =
       await tryFrame(
@@ -540,21 +812,30 @@ async function recognize() {
     }
 
 
+
     /*
-      Затем усиленный контраст.
+      Если не получилось —
+      пробуем повышенный контраст.
     */
 
     if (!code) {
 
+
+      const enhancedCrops = [
+
+        0.75,
+        0.60,
+        0.50,
+        0.40,
+        0.30
+
+      ];
+
+
       for (
-        const crop of [
-          0.75,
-          0.60,
-          0.50,
-          0.40,
-          0.30
-        ]
+        const crop of enhancedCrops
       ) {
+
 
         code =
         await tryFrame(
@@ -572,6 +853,7 @@ async function recognize() {
     }
 
 
+
     if (!code) {
 
       throw new Error(
@@ -582,11 +864,14 @@ async function recognize() {
 
 
 
-    /* ДУБЛЬ */
+    /*
+      ПРОВЕРКА НА ДУБЛЬ
+    */
 
     if (
       scannedCodes.has(code)
     ) {
+
 
       setStatus(
         "⚠ Этот код уже считан",
@@ -601,7 +886,9 @@ async function recognize() {
     else {
 
 
-      scannedCodes.add(code);
+      scannedCodes.add(
+        code
+      );
 
 
       updateCounter();
@@ -621,7 +908,10 @@ async function recognize() {
 
   catch (error) {
 
-    console.error(error);
+
+    console.error(
+      error
+    );
 
 
     setStatus(
@@ -634,6 +924,7 @@ async function recognize() {
 
   busy = false;
 
+
   scanButton.disabled =
   false;
 
@@ -641,9 +932,9 @@ async function recognize() {
 
 
 
-/* ===========================
-   ОТПРАВИТЬ
-=========================== */
+/* =====================================================
+   ОТПРАВИТЬ ПАРТИЮ
+===================================================== */
 
 sendButton.onclick =
 sendBatch;
@@ -651,10 +942,13 @@ sendBatch;
 
 async function sendBatch() {
 
+
   if (
     scannedCodes.size === 0
   ) {
+
     return;
+
   }
 
 
@@ -664,31 +958,34 @@ async function sendBatch() {
   );
 
 
-  /*
-    Один комментарий применяется
-    ко всей отправляемой партии.
-  */
-
   const comment =
   commentInput.value.trim();
+
 
 
   sendButton.disabled =
   true;
 
+
   scanButton.disabled =
   true;
+
 
   commentInput.disabled =
   true;
 
 
+
   setStatus(
+
     "Отправляю " +
     codes.length +
     " кодов...",
+
     "working"
+
   );
+
 
 
   try {
@@ -719,8 +1016,11 @@ async function sendBatch() {
       url,
 
       {
+
         method: "GET",
+
         mode: "no-cors"
+
       }
 
     );
@@ -728,18 +1028,12 @@ async function sendBatch() {
 
 
     /*
-      Очищаем партию только
-      после отправки.
+      После отправки очищаем
+      текущую партию.
     */
 
     scannedCodes.clear();
 
-
-    /*
-      Комментарий тоже очищаем,
-      чтобы случайно не применить
-      его к следующей партии.
-    */
 
     commentInput.value =
     "";
@@ -748,11 +1042,16 @@ async function sendBatch() {
     updateCounter();
 
 
+
     setStatus(
+
       "✓ Отправлено: " +
       codes.length,
+
       "success"
+
     );
+
 
 
     if (
@@ -769,8 +1068,16 @@ async function sendBatch() {
 
   catch (error) {
 
-    console.error(error);
 
+    console.error(
+      error
+    );
+
+
+    /*
+      При ошибке список кодов
+      остаётся на телефоне.
+    */
 
     setStatus(
       "Ошибка отправки. Коды не удалены.",
@@ -780,11 +1087,14 @@ async function sendBatch() {
   }
 
 
+
   sendButton.disabled =
   false;
 
+
   scanButton.disabled =
   false;
+
 
   commentInput.disabled =
   false;
@@ -793,9 +1103,9 @@ async function sendBatch() {
 
 
 
-/* ===========================
+/* =====================================================
    СЧЁТЧИК
-=========================== */
+===================================================== */
 
 function updateCounter() {
 
@@ -813,11 +1123,13 @@ function updateCounter() {
     count > 0
   ) {
 
+
     sendButton.style.display =
     "block";
 
 
     sendButton.innerText =
+
     "ОТПРАВИТЬ (" +
     count +
     ")";
@@ -825,6 +1137,7 @@ function updateCounter() {
   }
 
   else {
+
 
     sendButton.style.display =
     "none";
@@ -835,9 +1148,9 @@ function updateCounter() {
 
 
 
-/* ===========================
-   РАСПОЗНАВАНИЕ
-=========================== */
+/* =====================================================
+   РАСПОЗНАВАНИЕ КАДРА
+===================================================== */
 
 async function tryFrame(
   cropRatio,
@@ -845,11 +1158,25 @@ async function tryFrame(
 ) {
 
 
+  /*
+    ВАЖНО:
+
+    Для распознавания используем
+    настоящий исходный video,
+    а не canvas-видоискатель.
+
+    Поэтому качество распознавания
+    не ухудшается.
+  */
+
+
   const sw =
   video.videoWidth;
 
+
   const sh =
   video.videoHeight;
+
 
 
   const cropSize =
@@ -865,6 +1192,7 @@ async function tryFrame(
   );
 
 
+
   const sx =
   Math.floor(
     (sw - cropSize) / 2
@@ -875,6 +1203,7 @@ async function tryFrame(
   Math.floor(
     (sh - cropSize) / 2
   );
+
 
 
   const outputSize =
@@ -890,15 +1219,18 @@ async function tryFrame(
   );
 
 
-  canvas.width =
+
+  scanCanvas.width =
   outputSize;
 
-  canvas.height =
+
+  scanCanvas.height =
   outputSize;
+
 
 
   const ctx =
-  canvas.getContext(
+  scanCanvas.getContext(
 
     "2d",
 
@@ -909,8 +1241,10 @@ async function tryFrame(
   );
 
 
+
   ctx.imageSmoothingEnabled =
   false;
+
 
 
   ctx.drawImage(
@@ -930,6 +1264,7 @@ async function tryFrame(
   );
 
 
+
   let imageData =
   ctx.getImageData(
 
@@ -942,6 +1277,7 @@ async function tryFrame(
   );
 
 
+
   if (
     enhance
   ) {
@@ -951,6 +1287,7 @@ async function tryFrame(
     );
 
   }
+
 
 
   const results =
@@ -981,6 +1318,7 @@ async function tryFrame(
   );
 
 
+
   if (
     results &&
     results.length > 0
@@ -998,12 +1336,21 @@ async function tryFrame(
       ) {
 
 
+        console.log(
+          "ZXing:",
+          result
+        );
+
+
         let code =
         result.text || "";
 
 
+
         /*
-          GS1 -> требуемый формат.
+          Приводим GS1 к формату,
+          который отправляем
+          в Google Sheets.
         */
 
         code =
@@ -1050,9 +1397,9 @@ async function tryFrame(
 
 
 
-/* ===========================
+/* =====================================================
    КОНТРАСТ
-=========================== */
+===================================================== */
 
 function enhanceContrast(
   imageData
@@ -1065,6 +1412,7 @@ function enhanceContrast(
 
   const contrast =
   1.6;
+
 
 
   for (
@@ -1083,6 +1431,7 @@ function enhanceContrast(
     0.114 * data[i + 2];
 
 
+
     let value =
 
     (gray - 128)
@@ -1090,6 +1439,7 @@ function enhanceContrast(
     * contrast
 
     + 128;
+
 
 
     value =
@@ -1105,11 +1455,14 @@ function enhanceContrast(
     );
 
 
+
     data[i] =
     value;
 
+
     data[i + 1] =
     value;
+
 
     data[i + 2] =
     value;
@@ -1120,11 +1473,12 @@ function enhanceContrast(
 
 
 
-/* ===========================
+/* =====================================================
    ВИБРАЦИЯ
-=========================== */
+===================================================== */
 
 function vibrateSuccess() {
+
 
   if (
     navigator.vibrate
@@ -1139,7 +1493,9 @@ function vibrateSuccess() {
 }
 
 
+
 function vibrateDuplicate() {
+
 
   if (
     navigator.vibrate
@@ -1155,9 +1511,9 @@ function vibrateDuplicate() {
 
 
 
-/* ===========================
+/* =====================================================
    СТАТУС
-=========================== */
+===================================================== */
 
 function setStatus(
   text,
